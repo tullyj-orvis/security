@@ -1,4 +1,5 @@
 import json
+import time
 import requests
 from secrets import *
 from requests.structures import CaseInsensitiveDict 
@@ -8,6 +9,7 @@ api_baseurl = "https://api.crowdstrike.com"
 token_url = "/oauth2/token"
 session_url ="/real-time-response/entities/sessions/v1"
 command_url ="/real-time-response/entities/admin-command/v1"
+batch_command_url="/real-time-response/combined/batch-admin-command/v1?timeout=30&timeout_duration=30s&host_timeout_duration=19s"
 devices_url ="/devices/queries/devices/v1?filter="
 contain_host_url ="/devices/entities/devices-actions/v2?action_name="
 get_detections_url ="/detects/aggregates/detects/GET/v1"
@@ -66,6 +68,7 @@ def start_batch_session(device_id):
     data = '{  "existing_batch_id": "",  "host_ids": [    "%s"  ],  "queue_offline": true}' % device_id
     
     
+    print(data)
     resp = requests.post(batch_session_request_url, headers=headers, data=data)
 
     resp_json = resp.json()
@@ -137,7 +140,57 @@ def get_detection_details(detection_id):
 
     return resp_json   
 
+def test_run_script(script, batch_id):
+    
+    access_token = get_token()
 
+    headers = {
+        'accept': 'application/json',
+        'authorization':  'bearer %s' % (access_token)
+        # Already added when you pass json= but not when you pass data=
+        # 'Content-Type': 'application/json',
+    }
+
+    params = {
+        'timeout': '30',
+        'timeout_duration': '30s',
+        'host_timeout_duration': '30s',
+    }
+
+    json_data = {
+        'base_command': 'runsccript',
+        'batch_id': '%s' % (batch_id),
+        'command_string': 'runscript -CloudFile=%s' % (script),
+        'optional_hosts': [
+            '',
+        ],
+        'persist_all': True,
+    }
+
+    resp = requests.post('https://api.crowdstrike.com/real-time-response/combined/batch-admin-command/v1', params=params, headers=headers, json=json_data)
+    print(resp)
+
+def batch_run_script(script, batch_id):
+
+    access_token = get_token()
+    full_url = api_baseurl + batch_command_url
+   
+    headers = CaseInsensitiveDict()
+    headers["accept"] = "application/json"
+    headers["Content-Type"] = "application/json"
+    headers["authorization"] = "bearer " + access_token
+    
+
+    #data = '{  "base_command": "runscript",  "batch_id": "%s",  "command_string": "runscript -CloudFile=%s",  "optional_hosts": [    ""    ],  "persist_all": true}' % (batch_id, script)
+    data = "{  \"base_command\": \"runscript\",  \"batch_id\": \"%s\",  \"command_string\": \"runscript -CloudFile=%s\",  \"optional_hosts\": [      ],  \"persist_all\": true}" % (batch_id, script)
+    print(data)
+
+    #time.sleep(21)
+    print(full_url)
+    print(headers)
+    resp = requests.post(full_url, verify=False, headers=headers, data=data) 
+    print(resp)
+    
 def run_script(script, session_id):
 
     access_token = get_token()

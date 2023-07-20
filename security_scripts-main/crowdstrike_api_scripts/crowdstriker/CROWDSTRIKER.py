@@ -52,6 +52,62 @@ def network_contain():
     input("\n\nPress any key to return to main menu.")
     main()
 
+def batch_run_script_on_host(): 
+    clear_screen()
+    print(banner)
+    resources = {}
+    #hostname = input("Hostname: ")
+    script = input("Script to run on hosts from ./hostfile.txt (from scripts uploaded to Crowdstrike)\n> ")
+    print("Initializing session...\n")
+
+    host_file = open('hosts.txt', 'r')
+    lines = host_file.readlines()
+    print(lines)
+    host_string = ""
+    for i in lines:
+        i = i.rstrip()
+        print(i)
+        device_id = get_device(i)
+        host_string += "\"" + device_id + "\", "
+
+    host_string = host_string[:-3]
+    host_string = host_string[1:]
+    print(host_string)
+
+    #device_id = get_device(hostname)
+    access_token = get_token()
+    resp_json = start_batch_session(host_string)
+    print(resp_json)
+    batch_id = resp_json['batch_id']
+    #session_id = resp_json['resources'][device_id]['session_id']
+    command_request_url = api_baseurl + command_url
+
+    print("Running script...")
+    batch_run_script(script, batch_id)
+    
+    input("Press any key to return to main menu.")
+    main()
+
+def run_script_on_host(): 
+    clear_screen()
+    print(banner)
+    resources = {}
+    hostname = input("Hostname: ")
+    script = input("Script to run on %s (from scripts uploaded to Crowdstrike)\n> " % hostname)
+    print("Initializing session on %s...\n" % hostname)
+    device_id = get_device(hostname)
+    access_token = get_token()
+    resp_json = start_batch_session(device_id)
+    batch_id = resp_json['batch_id']
+    session_id = resp_json['resources'][device_id]['session_id']
+    command_request_url = api_baseurl + command_url
+
+    print("Running script...")
+    run_script(script, session_id)
+    
+    input("Press any key to return to main menu.")
+    main()
+
 def download_file_from_host(): 
     clear_screen()
     print(banner)
@@ -227,7 +283,7 @@ def main():
                                                                                                  
         """)
     
-    selection = input("Select an option by number: \n1: Alerts\n2: Netlogon\n3: Get Access Token\n4: Download file from host\n5: Control host network containment\n> ")
+    selection = input("Select an option by number: \n1: Alerts\n2: Netlogon\n3: Get Access Token\n4: Download file from host\n5: Control host network containment\n6: Run script on host\n7: Run script on multiple hosts\n> ")
     
     if selection == "1":
         detections()
@@ -239,6 +295,10 @@ def main():
         download_file_from_host()
     elif selection == "5":
         network_contain()
+    elif selection == "6":
+        run_script_on_host()
+    elif selection == "7":
+        batch_run_script_on_host()
 
 #Change this to more specific SSL warning on windows workstations
 warnings.filterwarnings("ignore")
